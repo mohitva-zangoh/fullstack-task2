@@ -1,0 +1,1 @@
+// Centralized in src/types/
