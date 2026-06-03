@@ -64,3 +64,27 @@ def get_file_url(
     
     url = get_presigned_url(settings.MINIO_BUCKET_NAME, file_record.object_name)
     return {"url": url}
+
+@router.get("/", response_model=list[FileResponse])
+def list_files(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+) -> Any:
+    files = db.query(FileModel).filter(FileModel.owner_id == current_user.id).all()
+    return files
+
+@router.delete("/{file_id}")
+def delete_file(
+    file_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+) -> Any:
+    file_record = db.query(FileModel).filter(FileModel.id == file_id).first()
+    if not file_record:
+        raise HTTPException(status_code=404, detail="File not found")
+    if file_record.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    db.delete(file_record)
+    db.commit()
+    return {"message": "File deleted successfully"}
+    
